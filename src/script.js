@@ -1,105 +1,80 @@
 import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
 import * as dat from 'dat.gui'
 
-// Debug
-const gui = new dat.GUI()
+// Necessary for camera/plane rotation
+var degree = Math.PI/180;
 
-// Canvas
-const canvas = document.querySelector('canvas.webgl')
+// Setup
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000000);
+var renderer = new THREE.WebGLRenderer();
 
-// Scene
-const scene = new THREE.Scene()
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-// Objects
-const geometry = new THREE.TorusGeometry( .7, .2, 16, 100 );
+// Resize after viewport-size-change
+window.addEventListener("resize", function () {
+    var height = window.innerHeight;
+    var width = window.innerWidth;
+    renderer.setSize(width, height);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+});
 
-// Materials
+// Adding controls
+const controls = new OrbitControls(camera, renderer.domElement);
 
-const material = new THREE.MeshBasicMaterial()
-material.color = new THREE.Color(0xff0000)
+// Ground (comment out line: "scene.add( plane );" if Ground is not needed...)
+var plane = new THREE.Mesh(
+    new THREE.PlaneBufferGeometry(500, 500 ),
+    new THREE.MeshPhongMaterial( { color: 0x999999, specular: 0x101010 } )
+);
+plane.rotation.x = -90 * degree;
+plane.position.y = 0;
+scene.add( plane );
+plane.receiveShadow = true;
 
-// Mesh
-const sphere = new THREE.Mesh(geometry,material)
-scene.add(sphere)
+// ASCII file - STL Import
+var loader = new STLLoader();
+loader.load( './models/Right_Femur.stl', function ( geometry ) {
+    var material = new THREE.MeshLambertMaterial( { color: 0xFFFFFF, specular: 0x111111, shininess: 200 } );
+    var mesh = new THREE.Mesh( geometry, material );
+    mesh.position.set( 0, 0, 0);
+    scene.add( mesh );
+} );
 
-// Lights
+// Binary files - STL Import
+// loader.load( './stl/2.stl', function ( geometry ) {
+//     var material = new THREE.MeshLambertMaterial( { color: 0xFFFFFF, specular: 0x111111, shininess: 200 } );
+//     var mesh = new THREE.Mesh( geometry, material );
+//     mesh.position.set( 0, 20, 0);
+//     scene.add( mesh );
+// } );
 
-const pointLight = new THREE.PointLight(0xffffff, 0.1)
-pointLight.position.x = 2
-pointLight.position.y = 3
-pointLight.position.z = 4
-scene.add(pointLight)
+// Camera positioning
+camera.position.z = 0;
+camera.position.y = -733;
+camera.rotation.x = -117 //-45 * degree;
 
-/**
- * Sizes
- */
-const sizes = {
-    width: window.innerWidth,
-    height: window.innerHeight
-}
+camera.lookAt(new THREE.Vector3(-116, -90, 739))
 
-window.addEventListener('resize', () =>
-{
-    // Update sizes
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
+// Ambient light (necessary for Phong/Lambert-materials, not for Basic)
+var ambientLight = new THREE.AmbientLight(0xffffff, 10);
+scene.add(ambientLight);
 
-    // Update camera
-    camera.aspect = sizes.width / sizes.height
-    camera.updateProjectionMatrix()
+// Draw scene
+var render = function () {
+    renderer.render(scene, camera);
+};
 
-    // Update renderer
-    renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-})
+// Run game loop (render,repeat)
+var GameLoop = function () {
+    requestAnimationFrame(GameLoop);
 
-/**
- * Camera
- */
-// Base camera
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-camera.position.x = 0
-camera.position.y = 0
-camera.position.z = 2
-scene.add(camera)
+    render();
+};
 
-// Controls
-// const controls = new OrbitControls(camera, canvas)
-// controls.enableDamping = true
-
-/**
- * Renderer
- */
-const renderer = new THREE.WebGLRenderer({
-    canvas: canvas
-})
-renderer.setSize(sizes.width, sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-
-/**
- * Animate
- */
-
-const clock = new THREE.Clock()
-
-const tick = () =>
-{
-
-    const elapsedTime = clock.getElapsedTime()
-
-    // Update objects
-    sphere.rotation.y = .5 * elapsedTime
-
-    // Update Orbital Controls
-    // controls.update()
-
-    // Render
-    renderer.render(scene, camera)
-
-    // Call tick again on the next frame
-    window.requestAnimationFrame(tick)
-}
-
-tick()
+GameLoop();
